@@ -14,12 +14,13 @@
   build_string/1,
   build_bin/1,
   build_boolean/1,
-  build_value/1,
-
   build_list/1,
+  build_value/1,
 
   build_var/1,
   build_op/3,
+  build_call/3,
+  build_call/2,
 
   is_ast/2,
   is_ast/1
@@ -256,6 +257,13 @@ build_op(Op, A, B) when is_atom(Op), is_tuple(A), is_tuple(B) ->
     IS_AST -> {op, 1, Op, A, B};
     true -> throw(function_clause)
   end.
+
+%% @doc
+%% @end
+build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_list(Parameters) ->
+  {call, 1, {remote, 1, {atom, 1, Module}, {atom, 1, Function}}, Parameters}.
+build_call(Function, Parameters) when is_atom(Function), is_list(Parameters) ->
+  {call, 1, {atom, 1, Function}, Parameters}.
 
 %% @doc
 %% @end
