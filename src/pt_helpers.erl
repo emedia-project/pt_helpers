@@ -23,7 +23,9 @@
   build_call/2,
 
   is_ast/2,
-  is_ast/1
+  is_ast/1,
+
+  fields/1
 ]).
 
 -record(pt_ast, {
@@ -35,13 +37,19 @@
   module_name,
   exports = [],
   exports_pos = -1,
-  functions = []
+  functions = [],
+  fields
 }).
 
 -record(pt_fun, {
   index, 
   name, 
   arity
+}).
+
+-record(pt_field, {
+  index,
+  data
 }).
 
 -type pt_ast() :: #pt_ast{}.
@@ -280,6 +288,14 @@ is_ast(Type, AST) ->
 -spec is_ast(ast()) -> true | false.
 is_ast(AST) -> is_ast(any, AST).
 
+%% @doc
+%% @end
+-spec fields(ast()) -> list().
+fields(#pt_ast{fields = Fields}) -> 
+  lists:map(fun(#pt_field{data = Data}) ->
+        Data
+    end, Fields).
+
 % Private parse
 
 parse_definition({attribute, _, module, ModuleName}, {Index, Files, PT_AST}) ->
@@ -297,6 +313,10 @@ parse_definition({attribute, _, file, {FileName, _}}, {Index, Files, PT_AST}) ->
 parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, PT_AST = #pt_ast{functions = Functions}}) ->
   NewFun = #pt_fun{index = Index, name = FunctionName, arity = FunctionArity},
   {Index + 1, Files, PT_AST#pt_ast{functions = Functions ++ [NewFun]}};
+
+parse_definition({attribute, _, field, Field}, {Index, Files, PT_AST = #pt_ast{fields = Fields}}) ->
+  NewField = #pt_field{index = Index, data = Field},
+  {Index + 1, Files, PT_AST#pt_ast{fields = Fields ++ [NewField]}};
 
 parse_definition({eof, N}, {Index, Files, PT_AST}) ->
   {Index + 1, Files, PT_AST#pt_ast{last_line = N}};
