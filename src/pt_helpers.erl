@@ -48,7 +48,6 @@
 %% @end
 -spec parse(string(), list()) -> pt_ast().
 parse(AST, Options) ->
-  io:format("~p~n", [AST]),
   [{attribute, _, file, {FileName, _}}|NextAST] = AST,
   PT_AST = #pt_ast{
       main_file = FileName,
@@ -84,7 +83,7 @@ generate(#pt_ast{
     added_functions = AddedFunctions,
     added_records = AddedRecords
   }) ->
-  {AstToExport, AstTypes, AstFunctions} = cut_ast_(
+  {AstToExport, AstTypes, AstFunctions, AstEof} = cut_ast_(
     AST,
     ExportPos, 
     FunctionPos
@@ -94,21 +93,43 @@ generate(#pt_ast{
     generate_exports_(AddedFunctions) ++
     AstTypes ++
     generate_records_(AddedRecords) ++
+    AstFunctions ++
     generate_functions_(AddedFunctions) ++
-    AstFunctions,
+    AstEof,
   %% Option +renumber
   OutAST = case is_in(renumber, Options) of
     true -> pt_utils:renumber(AST1);
     false -> AST1
   end,
-  io:format("~p~n", [OutAST]),
   OutAST.
 
+cut_ast_(AST, -1, -1) ->
+  {
+    lists:sublist(AST, 1, length(AST) - 1), 
+    [], 
+    [],
+    [lists:nth(length(AST), AST)]
+  };
+cut_ast_(AST, -1, FunctionPos) ->
+  {
+    lists:sublist(AST, 1, FunctionPos),
+    [],
+    lists:sublist(AST, FunctionPos + 1, length(AST) - FunctionPos - 1),
+    [lists:nth(length(AST), AST)]
+  };
+cut_ast_(AST, ExportPos, -1) ->
+  {
+    lists:sublist(AST, 1, ExportPos + 1),
+    lists:sublist(AST, ExportPos + 2, length(AST) - ExportPos - 2),
+    [],
+    [lists:nth(length(AST), AST)]
+  };
 cut_ast_(AST, ExportPos, FunctionPos) ->
   {
     lists:sublist(AST, 1, ExportPos + 1),
     lists:sublist(AST, ExportPos + 2, FunctionPos - ExportPos - 1),
-    lists:sublist(AST, FunctionPos + 1, length(AST) - FunctionPos)
+    lists:sublist(AST, FunctionPos + 1, length(AST) - FunctionPos - 1),
+    [lists:nth(length(AST), AST)]
   }.
 
 generate_exports_(AddedFunctions) ->
