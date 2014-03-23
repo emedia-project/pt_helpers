@@ -1,5 +1,7 @@
 -module(pt_helpers).
 
+-include("../include/pt_helpers_defs.hrl").
+
 -export([
   parse/2,
   generate/1,
@@ -7,6 +9,10 @@
   find_function/3,
   add_function/4,
   add_export/3,
+
+  add_record/3,
+
+  index/2,
   
   build_atom/1,
   build_integer/1,
@@ -24,37 +30,10 @@
 
   is_ast/2,
   is_ast/1,
+  get_ast_type/1,
 
   fields/1
 ]).
-
--record(pt_ast, {
-  ast,
-  options,
-  main_file,
-  compile_options,
-  last_line,
-  module_name,
-  exports = [],
-  exports_pos = -1,
-  functions = [],
-  fields
-}).
-
--record(pt_fun, {
-  index, 
-  name, 
-  arity
-}).
-
--record(pt_field, {
-  index,
-  data
-}).
-
--type pt_ast() :: #pt_ast{}.
--type pt_fun() :: #pt_fun{}.
--type ast() :: tuple() | [tuple()].
 
 %% @doc
 %% Parse the given AST and return
@@ -69,7 +48,7 @@
 %% @end
 -spec parse(string(), list()) -> pt_ast().
 parse(AST, Options) ->
-  io:format("~p~n~p~n", [Options, AST]),
+  io:format("~p~n", [AST]),
   [{attribute, _, file, {FileName, _}}|NextAST] = AST,
   PT_AST = #pt_ast{
       main_file = FileName,
@@ -78,7 +57,11 @@ parse(AST, Options) ->
     },
   Index = 1,
   Files = [FileName],
-  {_, _, PT_AST1} = lists:foldl(fun parse_definition/2, {Index, Files, PT_AST}, NextAST),
+  {_, _, PT_AST1} = lists:foldl(
+    fun parse_definition/2, 
+    {Index, Files, PT_AST}, 
+    NextAST
+  ),
   PT_AST1.
 
 %% @doc
@@ -93,17 +76,68 @@ parse(AST, Options) ->
 %% </pre>
 %% @end
 -spec generate(pt_ast()) -> ast().
-generate(PT_AST) ->
-  #pt_ast{ast = AST, options = Options} = generate_exports_(PT_AST),
+generate(#pt_ast{
+    ast = AST,
+    exports_pos = ExportPos, 
+    function_pos = FunctionPos,
+    options = Options,
+    added_functions = AddedFunctions,
+    added_records = AddedRecords
+  }) ->
+  {AstToExport, AstTypes, AstFunctions} = cut_ast_(
+    AST,
+    ExportPos, 
+    FunctionPos
+  ),
+  AST1 = 
+    AstToExport ++ 
+    generate_exports_(AddedFunctions) ++
+    AstTypes ++
+    generate_records_(AddedRecords) ++
+    generate_functions_(AddedFunctions) ++
+    AstFunctions,
+  %% Option +renumber
   OutAST = case is_in(renumber, Options) of
-    true -> pt_utils:renumber(AST);
-    false -> AST
+    true -> pt_utils:renumber(AST1);
+    false -> AST1
   end,
   io:format("~p~n", [OutAST]),
   OutAST.
-generate_exports_(PT_AST = #pt_ast{ast = AST, exports = Exports, exports_pos = Pos}) ->
-  {attribute, N, export, _} = lists:nth(Pos + 1, AST),
-  PT_AST#pt_ast{ast = change_def(AST, Pos, {attribute, N, export, Exports})}.
+
+cut_ast_(AST, ExportPos, FunctionPos) ->
+  {
+    lists:sublist(AST, 1, ExportPos + 1),
+    lists:sublist(AST, ExportPos + 2, FunctionPos - ExportPos - 1),
+    lists:sublist(AST, FunctionPos + 1, length(AST) - FunctionPos)
+  }.
+
+generate_exports_(AddedFunctions) ->
+  Exports = lists:foldl(
+    fun(#pt_fun{name = Name, arity = Arity}, Ast) ->
+        Ast ++ [{Name, Arity}]
+    end, [], AddedFunctions),
+  if
+    length(Exports) > 0 -> [{attribute, 1, export, Exports}];
+    true -> []
+  end.
+
+generate_functions_(AddedFunctions) ->
+  lists:foldl(
+    fun(#pt_fun{ast = AstFunction}, Ast) ->
+        Ast ++ [AstFunction]
+    end, [], AddedFunctions).
+
+generate_records_(AddedRecords) ->
+  lists:foldl(
+    fun(#pt_record{
+          ast = AstRecord,
+          ast_type = AstRecordType,
+          has_type = HasType}, Ast) ->
+        Ast ++ [AstRecord] ++ if
+          HasType =:= true -> [AstRecordType];
+          true -> []
+        end
+    end, [], AddedRecords).
   
 %% @doc
 %% Find the function with name <tt>Name</tt> and arity <tt>Arity</tt> in the parsed AST
@@ -131,21 +165,33 @@ find_function_([_|Rest], Name, Arity) ->
 %% Add a function to the AST
 %% @end
 -spec add_function(pt_ast(), export | not_export, atom(), list()) -> pt_ast().
-add_function(PT_AST = #pt_ast{ast = AST, functions = Functions}, Visibility, Name, Clauses) ->
-  {Arity, ASTClauses} = lists:foldl(fun add_function_clauses_/2, {0, []}, Clauses),
-  NewPTFun = #pt_fun{
-    index = length(AST),
-    name = Name,
-    arity = Arity
-  },
+add_function(
+  PT_AST = #pt_ast{added_functions = AddedFunctions}, 
+  Visibility, 
+  Name, 
+  Clauses
+) ->
+  {Arity, ASTClauses} = lists:foldl(
+    fun add_function_clauses_/2, 
+    {0, []}, 
+    Clauses
+  ),
   ASTFun = {function, 1, Name, Arity, ASTClauses},
-  PT_AST1 = PT_AST#pt_ast{ast = add_def(AST, ASTFun), functions = Functions ++ [NewPTFun]},
-  if 
-    Visibility =:= export -> add_export(PT_AST1, Name, Arity);
-    true -> PT_AST1
-  end.
+  NewFun = #pt_fun{
+    name = Name,
+    visibility = Visibility,
+    arity = Arity,
+    clauses = Clauses,
+    ast = ASTFun
+  },
+  PT_AST#pt_ast{
+    added_functions = AddedFunctions ++ [NewFun]
+  }.
 add_function_clauses_({Parameters, Clauses, Body}, {_, AST}) ->
-  {length(Parameters), AST ++ [{clause, 1, Parameters, Clauses, Body}]}.
+  {
+    length(Parameters), 
+    AST ++ [{clause, 1, Parameters, Clauses, Body}]
+  }.
 
 %% @doc
 %% Declare a new function to export in the AST
@@ -153,6 +199,76 @@ add_function_clauses_({Parameters, Clauses, Body}, {_, AST}) ->
 -spec add_export(pt_ast(), atom(), integer()) -> pt_ast().
 add_export(PT_AST = #pt_ast{exports = Exports}, Name, Arity) ->
   PT_AST#pt_ast{exports = Exports ++ [{Name, Arity}]}.
+
+%% @doc
+%% Declare a new record to export in the AST
+%% @end
+-spec add_record(pt_ast(), atom(), list()) -> pt_ast().
+add_record(PT_AST = #pt_ast{added_records = AddedRecs}, Name, Attributes) ->
+  {Attrs, AttrTypes, HasType} = add_record_fields_(Attributes, [], [], false),
+  AstRecord = {attribute, 1, record, {Name, Attrs}},
+  AstType = {attribute, 1, type, {{record, Name}, AttrTypes}},
+  Record = #pt_record{
+    name = Name,
+    fields = Attributes,
+    ast = AstRecord,
+    ast_type = AstType,
+    has_type = HasType
+  },
+  PT_AST#pt_ast{added_records = AddedRecs ++ [Record]}.
+add_record_fields_([], Result, ResultType, HasTypes) -> 
+  {Result, ResultType, HasTypes};
+add_record_fields_([{Attr, Types}|Attributes], Result, ResultType, HasTypes) when is_list(Types) ->
+  {NewResultType, NewHasType} = if 
+    length(Types) > 0 -> 
+      {ResultType ++ [
+          {typed_record_field,
+            {record_field, 1, build_atom(Attr)},
+            {type, 1, union, 
+              [{atom, 1, undefined}] ++ lists:map(fun(E) ->
+                    {type, 1, E, []}
+                end, Types)
+            }}
+        ], true};
+    true ->
+      {ResultType ++ [
+          {record_field, 1, build_atom(Attr)}
+        ], HasTypes}
+  end,
+  add_record_fields_(
+    Attributes, 
+    Result ++ [{record_field, 1, build_atom(Attr)}],
+    NewResultType,
+    NewHasType
+  );
+add_record_fields_([{Attr, Type}|Attributes], Result, ResultType, _HasTypes) when is_atom(Type) ->
+  add_record_fields_(
+    Attributes, 
+    Result ++ [{record_field, 1, build_atom(Attr)}],
+    ResultType ++ [
+      {typed_record_field,
+        {record_field, 1, build_atom(Attr)},
+        {type, 1, union, [{atom, 1, undefined}, {type, 1, Type, []}]}}
+    ],
+    true
+  );
+add_record_fields_([Attr|Attributes], Result, ResultType, HasTypes) when is_atom(Attr) ->
+  add_record_fields_(
+    Attributes, 
+    Result ++ [{record_field, 1, build_atom(Attr)}],
+    ResultType ++ [{record_field, 1, build_atom(Attr)}],
+    HasTypes
+  ).
+
+%% @doc
+%% Return AST at index
+%% @end
+-spec index(pt_ast(), integer()) -> ast().
+index(#pt_ast{ast = AST}, I) ->
+  if
+    length(AST) =< I -> {ok, lists:nth(I, AST)};
+    true -> {error, not_found}
+  end.
 
 %% @doc
 %% ASTify an atom
@@ -267,9 +383,14 @@ build_op(Op, A, B) when is_atom(Op), is_tuple(A), is_tuple(B) ->
   end.
 
 %% @doc
+%% ASTify a function call
 %% @end
 build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_list(Parameters) ->
   {call, 1, {remote, 1, {atom, 1, Module}, {atom, 1, Function}}, Parameters}.
+
+%% @doc
+%% ASTify a function call
+%% @end
 build_call(Function, Parameters) when is_atom(Function), is_list(Parameters) ->
   {call, 1, {atom, 1, Function}, Parameters}.
 
@@ -280,15 +401,37 @@ is_ast(Type, AST) ->
   case Type of
     boolean -> element(1, AST) =:= atom andalso (element(3, AST) =:= true orelse element(3, AST) =:= false);
     any -> is_atom(element(1, AST)) and is_integer(element(2, AST));
-    T -> element(1, AST) =:= T
+    T -> 
+      First = element(1, AST),
+      if
+        First =:= T -> true;
+        First =:= attribute -> element(3, AST) =:= Type;
+        true -> false
+      end
   end.
-
 %% @doc
 %% @end
 -spec is_ast(ast()) -> true | false.
 is_ast(AST) -> is_ast(any, AST).
 
 %% @doc
+%% Return the type of the given AST
+%% @end
+-spec get_ast_type(ast()) -> {ok, atom()} | {error, wrong_ast}.
+get_ast_type(E) when is_tuple(E) ->
+  IsAst = is_ast(E),
+  if
+    IsAst =:= true -> 
+      First = element(1, E),
+      if
+        First =:= attribute -> {ok, element(3, E)};
+        true -> First
+      end;
+    true -> {error, wrong_ast}
+  end.
+
+%% @doc
+%% Return the list of all availables fields
 %% @end
 -spec fields(ast()) -> list().
 fields(#pt_ast{fields = Fields}) -> 
@@ -310,9 +453,25 @@ parse_definition({attribute, _, export, Exports}, {Index, Files, PT_AST = #pt_as
 parse_definition({attribute, _, file, {FileName, _}}, {Index, Files, PT_AST}) ->
   {Index + 1, update_files(Files, FileName), PT_AST};
 
-parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, PT_AST = #pt_ast{functions = Functions}}) ->
-  NewFun = #pt_fun{index = Index, name = FunctionName, arity = FunctionArity},
-  {Index + 1, Files, PT_AST#pt_ast{functions = Functions ++ [NewFun]}};
+parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, PT_AST = #pt_ast{functions = Functions, function_pos = FFP}}) ->
+  NewFFP = if 
+    FFP =:= -1 -> Index;
+    true -> FFP
+  end,
+  {
+    Index + 1, 
+    Files, 
+    PT_AST#pt_ast{
+      functions = Functions ++ [
+        #pt_fun{
+          index = Index, 
+          name = FunctionName, 
+          arity = FunctionArity
+        }
+      ], 
+      function_pos = NewFFP
+    }
+  };
 
 parse_definition({attribute, _, field, Field}, {Index, Files, PT_AST = #pt_ast{fields = Fields}}) ->
   NewField = #pt_field{index = Index, data = Field},
@@ -341,12 +500,18 @@ update_files(Files, File) ->
       end
   end.
 
-change_def(AST, Index, Element) ->
-  lists:sublist(AST, Index) ++ [Element] ++ lists:nthtail(Index + 1, AST).
-
-add_def(AST, Element) ->
-  [EOF|Rest] = lists:reverse(AST),
-  lists:reverse([EOF] ++ [Element] ++ Rest).
+% change_def(AST, Index, Element) ->
+%   lists:sublist(AST, Index) ++ [Element] ++ lists:nthtail(Index + 1, AST).
+% 
+% add_def(AST, Element) ->
+%   [EOF|Rest] = lists:reverse(AST),
+%   lists:reverse([EOF] ++ [Element] ++ Rest).
+% 
+% add_def(AST, Index, Element) ->
+%   if
+%     Index =< 0 -> add_def(AST, Element);
+%     true -> lists:sublist(AST, Index) ++ [Element] ++ lists:nthtail(Index, AST)
+%   end.
 
 is_in(Element, List) ->
   lists:any(fun(E) -> E =:= Element end, List).
