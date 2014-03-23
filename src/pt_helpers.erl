@@ -29,6 +29,9 @@
   build_call/3,
   build_call/2,
 
+  build_record_field/2,
+  build_record_field/3,
+
   is_ast/2,
   is_ast/1,
   get_ast_type/1,
@@ -418,15 +421,79 @@ if_all_ast_(List, Result) ->
 
 %% @doc
 %% ASTify a function call
+%%
+%% Example:
+%% <pre>
+%% A = build_atom(atom),
+%% B = build_var('Var'),
+%% build_call(module, function, [A, B]) % == module:function(atom, Var)
+%% </pre>
 %% @end
+-spec build_call(atom(), atom(), list()) -> ast().
 build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_list(Parameters) ->
-  {call, 1, {remote, 1, {atom, 1, Module}, {atom, 1, Function}}, Parameters}.
+  {call, 1, 
+    {remote, 1, 
+      build_atom(Module),
+      build_atom(Function)}, 
+    Parameters}.
 
 %% @doc
 %% ASTify a function call
+%%
+%% Example:
+%% <pre>
+%% A = build_atom(atom),
+%% B = build_var('Var'),
+%% build_call(function, [A, B]) % == function(atom, Var)
+%% </pre>
 %% @end
+-spec build_call(atom(), list()) -> ast().
 build_call(Function, Parameters) when is_atom(Function), is_list(Parameters) ->
-  {call, 1, {atom, 1, Function}, Parameters}.
+  {call, 1, build_atom(Function), Parameters}.
+
+%% @doc
+%% ASTify a record_field
+%%
+%% Example:
+%% <pre>
+%% build_record_field('R', record, field) % == R#record.field
+%% </pre>
+%% @end
+-spec build_record_field(atom() | ast(), atom(), atom()) -> ast().
+build_record_field(RecordVar, RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
+  if
+    is_atom(RecordVar) -> 
+      {record_field, 1, 
+        build_var(RecordVar),
+        RecordName, 
+        build_atom(Field)};
+    is_tuple(RecordVar) ->
+      case is_ast(RecordVar) of
+        true ->
+          {record_field, 1, 
+            RecordVar,
+            RecordName, 
+            build_atom(Field)};
+        false ->
+          throw(function_clause)
+      end;
+    true ->
+      throw(function_clause)
+  end.
+
+%% @doc
+%% ASTify a record_field
+%%
+%% Example:
+%% <pre>
+%% build_record_field(record, field) % == record.field
+%% </pre>
+%% @end
+-spec build_record_field(atom(), atom()) -> ast().
+build_record_field(RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
+  {record_index, 1,
+    RecordName,
+    build_atom(Field)}.
 
 %% @doc
 %% @end
