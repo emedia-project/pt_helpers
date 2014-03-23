@@ -25,6 +25,7 @@
 
   build_var/1,
   build_op/3,
+  build_match/2,
   build_call/3,
   build_call/2,
 
@@ -395,11 +396,23 @@ build_var(A) when is_atom(A) ->
 %% @doc
 %% ASTify an operator
 %% @end
--spec build_op(atom(), tuple(), tuple()) -> ast().
+-spec build_op(atom(), ast(), ast()) -> ast().
 build_op(Op, A, B) when is_atom(Op), is_tuple(A), is_tuple(B) ->
-  IS_AST = is_ast(A) and is_ast(B),
+  if_all_ast_([A, B], {op, 1, Op, A, B}).
+
+%% @doc
+%% ASTify a match (=)
+%% @end
+-spec build_match(ast(), ast()) -> ast().
+build_match(A, B) when is_tuple(A), is_tuple(B) ->
+  if_all_ast_([A, B], {match, 1, A, B}).
+
+if_all_ast_(List, Result) ->
+  IS_AST = lists:all(fun(E) ->
+        is_ast(E)
+    end, List),
   if 
-    IS_AST -> {op, 1, Op, A, B};
+    IS_AST -> Result;
     true -> throw(function_clause)
   end.
 
