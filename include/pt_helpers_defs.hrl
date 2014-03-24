@@ -41,5 +41,5 @@
 
 -type pt_ast() :: #pt_ast{}.
 -type pt_fun() :: #pt_fun{}.
--type ast() :: tuple() | [tuple()].
+-type ast() :: tuple() | [ast()].
 

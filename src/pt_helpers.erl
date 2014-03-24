@@ -28,6 +28,11 @@
   build_match/2,
   build_call/3,
   build_call/2,
+  build_clause/2,
+  build_clause/3,
+  build_guard/1,
+  build_and_guard/2,
+  build_or_guard/2,
 
   build_record_field/2,
   build_record_field/3,
@@ -38,6 +43,90 @@
 
   fields/1
 ]).
+
+-spec build_clause(ast(), ast()) -> ast().
+build_clause(Vars, Body) -> build_clause(Vars, [], Body).
+-spec build_clause(ast(), ast(), ast()) -> ast().
+build_clause(Vars, Guards, Body) ->
+  Vars1 = if
+    is_list(Vars) -> Vars;
+    true -> [Vars]
+  end,
+  _ = if_all_ast(Vars1, ok),
+  Body1 = if
+    is_list(Body) -> Body;
+    true -> [Body]
+  end,
+  _ = if_all_ast(Body1, ok),
+  GuardsIsAst = lists:all(fun(E) ->
+        is_list(E) and lists:all(fun(F) ->
+              is_ast(F)
+          end, E)
+    end, Guards),
+  Guards1 = if
+    GuardsIsAst -> Guards;
+    true -> throw(function_clause)
+  end,
+  {clause, 1, Vars1, Guards1, Body1}.
+
+-spec build_guard(ast()) -> ast(). 
+build_guard(Ast) when is_tuple(Ast) -> 
+  build_guard([[Ast]]);
+build_guard(Ast) when is_list(Ast) ->
+  ListOfLists = lists:all(fun is_list/1, Ast),
+  if
+    ListOfLists -> if_all_ast(Ast, Ast);
+    true -> build_guard([Ast])
+  end.
+
+-spec build_and_guard(ast(), ast()) -> ast().
+build_and_guard(Ast1, Ast2) ->
+  LLAst1 = list_of_list_of_ast_(Ast1),
+  LLAst2 = list_of_list_of_ast_(Ast2),
+  if
+    LLAst1 =:= error orelse LLAst2 =:= error ->
+      throw(function_clause);
+    true ->
+      [LastAst1|RestLLAst1] = lists:reverse(LLAst1),
+      StartLLAst1 = lists:reverse(RestLLAst1),
+      [FirstAst2|EndAst2] = LLAst2,
+      StartLLAst1 ++ [LastAst1 ++ FirstAst2] ++ EndAst2
+  end.
+-spec build_or_guard(ast(), ast()) -> ast().
+build_or_guard(Ast1, Ast2) ->
+  LLAst1 = list_of_list_of_ast_(Ast1),
+  LLAst2 = list_of_list_of_ast_(Ast2),
+  if
+    LLAst1 =:= error orelse LLAst2 =:= error ->
+      throw(function_clause);
+    true ->
+      LLAst1 ++ LLAst2
+  end.
+
+list_of_list_of_ast_(Ast) ->
+  if
+    is_list(Ast) -> 
+      ListOfLists = lists:all(fun is_list/1, Ast),
+      if
+        ListOfLists -> 
+          ListOfListsOfAst = lists:all(fun(E) ->
+                  is_list(E) and lists:all(fun(F) ->
+                        not is_list(F) and is_ast(F)
+                    end, E)
+              end, Ast),
+          if
+            ListOfListsOfAst -> Ast;
+            true -> error
+          end;
+        true ->
+          SomeList = lists:any(fun is_list/1, Ast),
+          if
+            SomeList -> error;
+            true -> list_of_list_of_ast_(lists:map(fun(E) -> [E] end, Ast))
+          end
+      end;
+    true -> list_of_list_of_ast_([Ast])
+  end.
 
 %% @doc
 %% Parse the given AST and return
@@ -188,35 +277,61 @@ find_function_([_|Rest], Name, Arity) ->
 
 %% @doc
 %% Add a function to the AST
+%%
+%% Example:
+%% <pre>
+%% A = pt_helpers:build_var('A'),
+%% B = pt_helpers:build_var('B'),
+%% AIsNumber = pt_helpers:build_call(is_number, A),
+%% BIsNumber = pt_helpers:build_call(is_number, B),
+%% Guards = pt_helpers:build_and_guard(AIsNumber, BIsNumber),
+%% Body = pt_helpers:build_op('*', A, B),
+%% Clauses = pt_helpers:build_clause([A, B], Guards, Body),
+%% PT_AST1 = pt_helpers:add_function(PT_AST, export, my_function, Clauses)
+%% % => my_function(A, B) when is_number(A), is_number(B) -> A * B
+%% </pre>
 %% @end
--spec add_function(pt_ast(), export | not_export, atom(), list()) -> pt_ast().
+-spec add_function(pt_ast(), export | not_export, atom(), tuple() | list()) -> pt_ast().
 add_function(
   PT_AST = #pt_ast{added_functions = AddedFunctions}, 
   Visibility, 
   Name, 
   Clauses
 ) ->
-  {Arity, ASTClauses} = lists:foldl(
-    fun add_function_clauses_/2, 
-    {0, []}, 
-    Clauses
-  ),
-  ASTFun = {function, 1, Name, Arity, ASTClauses},
-  NewFun = #pt_fun{
-    name = Name,
-    visibility = Visibility,
-    arity = Arity,
-    clauses = Clauses,
-    ast = ASTFun
-  },
-  PT_AST#pt_ast{
-    added_functions = AddedFunctions ++ [NewFun]
-  }.
-add_function_clauses_({Parameters, Clauses, Body}, {_, AST}) ->
-  {
-    length(Parameters), 
-    AST ++ [{clause, 1, Parameters, Clauses, Body}]
-  }.
+  ArityAndClause = case is_list(Clauses) of
+    true -> {S, A} = get_arity_(Clauses), {S, A, Clauses};
+    false -> {S, A} = get_arity_([Clauses]), {S, A, [Clauses]}
+  end,
+  case ArityAndClause of
+    {ok, Arity, ASTClauses} ->
+      ASTFun = {function, 1, Name, Arity, ASTClauses},
+      NewFun = #pt_fun{
+        name = Name,
+        visibility = Visibility,
+        arity = Arity,
+        clauses = Clauses,
+        ast = ASTFun
+      },
+      PT_AST#pt_ast{
+        added_functions = AddedFunctions ++ [NewFun]
+      };
+    _ -> throw(function_clause)
+  end.
+get_arity_(Clauses) ->
+  lists:foldl(fun(Clause, {Status, Arity}) ->
+        if
+          Status =:= ok -> 
+            case Clause of
+              {clause, _, Parameters, _, _} -> 
+                if
+                  Arity =:= -1 orelse Arity =:= length(Parameters) -> {Status, length(Parameters)};
+                  true -> {error, Arity}
+                end;
+              _ -> {error, Arity}
+            end;
+          true -> {Status, Arity}
+        end
+    end, {ok, -1}, Clauses).
 
 %% @doc
 %% Declare a new function to export in the AST
@@ -401,23 +516,14 @@ build_var(A) when is_atom(A) ->
 %% @end
 -spec build_op(atom(), ast(), ast()) -> ast().
 build_op(Op, A, B) when is_atom(Op), is_tuple(A), is_tuple(B) ->
-  if_all_ast_([A, B], {op, 1, Op, A, B}).
+  if_all_ast([A, B], {op, 1, Op, A, B}).
 
 %% @doc
 %% ASTify a match (=)
 %% @end
 -spec build_match(ast(), ast()) -> ast().
 build_match(A, B) when is_tuple(A), is_tuple(B) ->
-  if_all_ast_([A, B], {match, 1, A, B}).
-
-if_all_ast_(List, Result) ->
-  IS_AST = lists:all(fun(E) ->
-        is_ast(E)
-    end, List),
-  if 
-    IS_AST -> Result;
-    true -> throw(function_clause)
-  end.
+  if_all_ast([A, B], {match, 1, A, B}).
 
 %% @doc
 %% ASTify a function call
@@ -429,13 +535,15 @@ if_all_ast_(List, Result) ->
 %% build_call(module, function, [A, B]) % == module:function(atom, Var)
 %% </pre>
 %% @end
--spec build_call(atom(), atom(), list()) -> ast().
+-spec build_call(atom(), atom(), ast()) -> ast().
 build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_list(Parameters) ->
   {call, 1, 
     {remote, 1, 
       build_atom(Module),
       build_atom(Function)}, 
-    Parameters}.
+    Parameters};
+build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_tuple(Parameters) ->
+  build_call(Module, Function, [Parameters]).
 
 %% @doc
 %% ASTify a function call
@@ -447,9 +555,11 @@ build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function)
 %% build_call(function, [A, B]) % == function(atom, Var)
 %% </pre>
 %% @end
--spec build_call(atom(), list()) -> ast().
+-spec build_call(atom(), ast()) -> ast().
 build_call(Function, Parameters) when is_atom(Function), is_list(Parameters) ->
-  {call, 1, build_atom(Function), Parameters}.
+  {call, 1, build_atom(Function), Parameters};
+build_call(Function, Parameters) when is_atom(Function), is_tuple(Parameters) ->
+  build_call(Function, [Parameters]).
 
 %% @doc
 %% ASTify a record_field
@@ -497,8 +607,8 @@ build_record_field(RecordName, Field) when is_atom(RecordName), is_atom(Field) -
 
 %% @doc
 %% @end
--spec is_ast(atom(), ast()) -> true | false.
-is_ast(Type, AST) ->
+-spec is_ast(atom(), ast() | [ast()]) -> true | false.
+is_ast(Type, AST) when is_tuple(AST) ->
   case Type of
     boolean -> element(1, AST) =:= atom andalso (element(3, AST) =:= true orelse element(3, AST) =:= false);
     any -> is_atom(element(1, AST)) and is_integer(element(2, AST));
@@ -509,10 +619,15 @@ is_ast(Type, AST) ->
         First =:= attribute -> element(3, AST) =:= Type;
         true -> false
       end
-  end.
+  end;
+is_ast(Type, AST) when is_list(AST) ->
+  lists:all(fun(E) ->
+        is_ast(Type, E)
+    end, AST).
+
 %% @doc
 %% @end
--spec is_ast(ast()) -> true | false.
+-spec is_ast(ast() | [ast()]) -> true | false.
 is_ast(AST) -> is_ast(any, AST).
 
 %% @doc
@@ -619,3 +734,11 @@ is_in(Element, List) ->
 
 is_string(S) ->
   io_lib:printable_list(S) orelse io_lib:printable_unicode_list(S).
+
+if_all_ast([], Result) -> Result;
+if_all_ast(List, Result) ->
+  IS_AST = is_ast(List),
+  if 
+    IS_AST -> Result;
+    true -> throw(function_clause)
+  end.

@@ -36,6 +36,7 @@ doc:
 	@mkdir doc
 	@cp _doc/* doc
 	$(REBAR) skip_deps=true doc
+	@cp _doc/stylesheet.css doc
 
 dev:
 	@erl -pa ebin 

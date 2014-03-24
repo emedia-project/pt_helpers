@@ -2,6 +2,18 @@
 
 Helpers for `parse_transform`
 
+## Documentation
+
+You can build the doc by running 
+
+```
+make doc
+```
+
+## Examples
+
+* [fib_add_transform](https://github.com/emedia-project/pt_helpers/blob/master/examples/fib_add_transform.erl)
+
 ## Licences
 
 pt_helpers is available for use under the following license, commonly known
