@@ -7,7 +7,7 @@
   module_name,
   exports = [],
   exports_pos = -1,
-  fields,
+  fields = [],
   functions = [],
   function_pos = -1,
 

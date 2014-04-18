@@ -5,7 +5,9 @@
 -export([
   parse/2,
   generate/1,
+  transform/3,
 
+  module_name/1,
   find_function/3,
   add_function/4,
   add_export/3,
@@ -21,6 +23,7 @@
   build_bin/1,
   build_boolean/1,
   build_list/1,
+  build_tuple/1,
   build_value/1,
 
   build_var/1,
@@ -43,6 +46,13 @@
 
   fields/1
 ]).
+
+%% @doc
+%% Return the name of the module
+%% @end
+-spec module_name(pt_ast()) -> string().
+module_name(#pt_ast{module_name = ModuleName}) ->
+  ModuleName.
 
 -spec build_clause(ast(), ast()) -> ast().
 build_clause(Vars, Body) -> build_clause(Vars, [], Body).
@@ -133,10 +143,10 @@ list_of_list_of_ast_(Ast) ->
 %%
 %% Example:
 %% <pre>
-%% parse_transform(AST, _Option) ->
-%%   PT_AST = pt_helpers:parse(AST),
+%% parse_transform(AST, Option) ->
+%%   PT_AST = pt_helpers:parse(AST, Options),
 %%   % Do something with PT_AST
-%%   pt_helpers(PT_AST).
+%%   pt_helpers:generate(PT_AST).
 %% </pre>
 %% @end
 -spec parse(string(), list()) -> pt_ast().
@@ -161,10 +171,10 @@ parse(AST, Options) ->
 %%
 %% Example:
 %% <pre>
-%% parse_transform(AST, _Option) ->
-%%   PT_AST = pt_helpers:parse(AST),
+%% parse_transform(AST, Option) ->
+%%   PT_AST = pt_helpers:parse(AST, Option),
 %%   % Do something with PT_AST
-%%   pt_helpers(PT_AST).
+%%   pt_helpers:generate(PT_AST).
 %% </pre>
 %% @end
 -spec generate(pt_ast()) -> ast().
@@ -195,6 +205,25 @@ generate(#pt_ast{
     false -> AST1
   end,
   OutAST.
+
+%% @doc
+%% TRansform using the given fun
+%%
+%% Example:
+%% <pre>
+%% parse_transform(AST, Option) ->
+%%   pt_helpers:transform(fun do_the_job/1, AST, Option).
+%%
+%% do_the_job(PT_AST) ->
+%%   % Do something with PT_AST
+%%   PT_ASTn.
+%% </pre>
+%% @end
+-spec transform(function(), string(), list()) -> ast().
+transform(Fun, AST, Options) ->
+  PT_AST = parse(AST, Options),
+  PT_AST1 = Fun(PT_AST),
+  generate(PT_AST1).
 
 cut_ast_(AST, -1, -1) ->
   {
@@ -460,6 +489,14 @@ do_build_list_([T|H], R) ->
   do_build_list_(H, E).
 
 %% @doc
+%% ASTify a tuple
+%% @end
+-spec build_tuple(tuple()) -> ast().
+build_tuple(T) when is_tuple(T) ->
+  TupleContent = lists:map(fun build_value/1, tuple_to_list(T)),
+  {tuple, 1, TupleContent}.
+
+%% @doc
 %% ASTify a bin
 %% @end
 build_bin(S) when is_bitstring(S) ->
@@ -501,8 +538,9 @@ build_value(X) when is_bitstring(X) ->
 build_value(X) when is_boolean(X) ->
   build_boolean(X);
 build_value(X) when is_list(X) ->
-  build_list(X).
-
+  build_list(X);
+build_value(X) when is_tuple(X) ->
+  build_tuple(X).
 
 %% @doc
 %% ASTify a variable
