@@ -37,8 +37,14 @@
   build_and_guard/2,
   build_or_guard/2,
 
+  build_record/1,
+  build_record/2,
+  build_record/3,
   build_record_field/2,
-  build_record_field/3,
+  build_get_record_field/2,
+  build_get_record_field/3,
+
+  build_fun/1,
 
   is_ast/2,
   is_ast/1,
@@ -68,14 +74,9 @@ build_clause(Vars, Guards, Body) ->
     true -> [Body]
   end,
   _ = if_all_ast(Body1, ok),
-  GuardsIsAst = lists:all(fun(E) ->
-        is_list(E) and lists:all(fun(F) ->
-              is_ast(F)
-          end, E)
-    end, Guards),
-  Guards1 = if
-    GuardsIsAst -> Guards;
-    true -> throw(function_clause)
+  Guards1 = case list_of_list_of_ast_(Guards) of
+    error -> throw(function_clause);
+    L -> L
   end,
   {clause, 1, Vars1, Guards1, Body1}.
 
@@ -207,7 +208,7 @@ generate(#pt_ast{
   OutAST.
 
 %% @doc
-%% TRansform using the given fun
+%% Transform using the given fun
 %%
 %% Example:
 %% <pre>
@@ -364,6 +365,12 @@ get_arity_(Clauses) ->
 
 %% @doc
 %% Declare a new function to export in the AST
+%% 
+%% Example:
+%% <pre>
+%% % export function/2
+%% pt_helpers:add_export(function, 2).
+%% </pre>
 %% @end
 -spec add_export(pt_ast(), atom(), integer()) -> pt_ast().
 add_export(PT_AST = #pt_ast{exports = Exports}, Name, Arity) ->
@@ -371,6 +378,11 @@ add_export(PT_AST = #pt_ast{exports = Exports}, Name, Arity) ->
 
 %% @doc
 %% Declare a new record to export in the AST
+%% 
+%% Example:
+%% <pre>
+%% pt_helpers:add_record(record_name, [{field1, integer}, {field2, []}, field3]).
+%% </pre>
 %% @end
 -spec add_record(pt_ast(), atom(), list()) -> pt_ast().
 add_record(PT_AST = #pt_ast{added_records = AddedRecs}, Name, Attributes) ->
@@ -540,7 +552,58 @@ build_value(X) when is_boolean(X) ->
 build_value(X) when is_list(X) ->
   build_list(X);
 build_value(X) when is_tuple(X) ->
-  build_tuple(X).
+  case is_ast(X) of
+    true -> X;
+    false -> build_tuple(X)
+  end.
+
+%% @doc
+%% ASTify a record
+%%
+%% Example:
+%% <pre>
+%% pt_helpers:build_record(rec) % => #rec{}
+%% </pre>
+%% @end
+build_record(Name) when is_atom(Name) ->
+  build_record(Name, []).
+%% @doc
+%% ASTify a record
+%%
+%% Example:
+%% <pre>
+%% F1 = pt_helpers:build_record_field(field1, pt_helpers:build_value(12)),
+%% F2 = pt_helpers:build_record_field(field2, pt_helpers:build_var('X'),
+%% pt_helpers:build_record(rec, [F1, F2]) % => #rec{field1 = 12, field2 = X}
+%% </pre>
+%% @end
+build_record(Name, Fields) when is_atom(Name), is_list(Fields) ->
+  {record, 1, Name, Fields};
+%% @doc
+%% ASTify a record
+%%
+%% Example:
+%% <pre>
+%% pt_helpers:build_record('X', rec) % => X#rec{}
+%% </pre>
+%% @end
+build_record(Record, Name) when is_atom(Name) ->
+  build_record(Record, Name, []).
+%% @doc
+%% ASTify a record
+%%
+%% Example:
+%% <pre>
+%% F1 = pt_helpers:build_record_field(field1, pt_helpers:build_value(12)),
+%% F2 = pt_helpers:build_record_field(field2, pt_helpers:build_var('X'),
+%% pt_helpers:build_record('R', rec, [F1, F2]) % => R#rec{field1 = 12, field2 = X}
+%% </pre>
+%% @end
+build_record(Record, Name, Fields) when is_atom(Name), is_list(Fields) ->
+  {record, 1, 
+   build_var(Record),
+   Name,
+   Fields}.
 
 %% @doc
 %% ASTify a variable
@@ -573,14 +636,22 @@ build_match(A, B) when is_tuple(A), is_tuple(B) ->
 %% build_call(module, function, [A, B]) % == module:function(atom, Var)
 %% </pre>
 %% @end
--spec build_call(atom(), atom(), ast()) -> ast().
-build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_list(Parameters) ->
+-spec build_call(atom() | ast(), atom() | ast(), ast()) -> ast().
+build_call(Module, Function, Parameters) when is_list(Parameters) ->
+  Module1 = case is_ast(Module) of
+    true -> Module;
+    false -> build_atom(Module)
+  end,
+  Function1 = case is_ast(Function) of
+    true -> Function;
+    false -> build_atom(Function)
+  end,
   {call, 1, 
     {remote, 1, 
-      build_atom(Module),
-      build_atom(Function)}, 
+      Module1,
+      Function1}, 
     Parameters};
-build_call(Module, Function, Parameters) when is_atom(Module), is_atom(Function), is_tuple(Parameters) ->
+build_call(Module, Function, Parameters) when is_tuple(Parameters) ->
   build_call(Module, Function, [Parameters]).
 
 %% @doc
@@ -604,11 +675,11 @@ build_call(Function, Parameters) when is_atom(Function), is_tuple(Parameters) ->
 %%
 %% Example:
 %% <pre>
-%% build_record_field('R', record, field) % == R#record.field
+%% build_get_record_field('R', record, field) % == R#record.field
 %% </pre>
 %% @end
--spec build_record_field(atom() | ast(), atom(), atom()) -> ast().
-build_record_field(RecordVar, RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
+-spec build_get_record_field(atom() | ast(), atom(), atom()) -> ast().
+build_get_record_field(RecordVar, RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
   if
     is_atom(RecordVar) -> 
       {record_field, 1, 
@@ -634,14 +705,34 @@ build_record_field(RecordVar, RecordName, Field) when is_atom(RecordName), is_at
 %%
 %% Example:
 %% <pre>
-%% build_record_field(record, field) % == record.field
+%% build_get_record_field(record, field) % == record.field
 %% </pre>
 %% @end
--spec build_record_field(atom(), atom()) -> ast().
-build_record_field(RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
+-spec build_get_record_field(atom(), atom()) -> ast().
+build_get_record_field(RecordName, Field) when is_atom(RecordName), is_atom(Field) ->
   {record_index, 1,
     RecordName,
     build_atom(Field)}.
+
+%% @doc
+%% ASTify a record_field
+%%
+%% Example:
+%% <pre>
+%% build_record_field(record, field) % == {record = field}
+%% </pre>
+%% @end
+-spec build_record_field(atom(), ast()) -> ast().
+build_record_field(Field, Value) when is_atom(Field) ->
+  {record_field, 1, build_atom(Field), Value}.
+
+%% @doc
+%% ASTify a fun
+%% @end
+build_fun(Clauses) when is_list(Clauses) ->
+  {'fun', 1, {clauses, Clauses}};
+build_fun(Clause) when is_tuple(Clause) ->
+  build_fun([Clause]).
 
 %% @doc
 %% @end
@@ -661,7 +752,8 @@ is_ast(Type, AST) when is_tuple(AST) ->
 is_ast(Type, AST) when is_list(AST) ->
   lists:all(fun(E) ->
         is_ast(Type, E)
-    end, AST).
+    end, AST);
+is_ast(_, _) -> false.
 
 %% @doc
 %% @end
