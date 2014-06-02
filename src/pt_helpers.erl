@@ -75,7 +75,7 @@ build_clause(Vars, Guards, Body) ->
   end,
   _ = if_all_ast(Body1, ok),
   Guards1 = case list_of_list_of_ast_(Guards) of
-    error -> throw(function_clause);
+    error -> throw(function_clause_build_clause);
     L -> L
   end,
   {clause, 1, Vars1, Guards1, Body1}.
@@ -96,7 +96,7 @@ build_and_guard(Ast1, Ast2) ->
   LLAst2 = list_of_list_of_ast_(Ast2),
   if
     LLAst1 =:= error orelse LLAst2 =:= error ->
-      throw(function_clause);
+      throw(function_clause_build_and_guard);
     true ->
       [LastAst1|RestLLAst1] = lists:reverse(LLAst1),
       StartLLAst1 = lists:reverse(RestLLAst1),
@@ -109,7 +109,7 @@ build_or_guard(Ast1, Ast2) ->
   LLAst2 = list_of_list_of_ast_(Ast2),
   if
     LLAst1 =:= error orelse LLAst2 =:= error ->
-      throw(function_clause);
+      throw(function_clause_build_or_guard);
     true ->
       LLAst1 ++ LLAst2
   end.
@@ -345,7 +345,7 @@ add_function(
       PT_AST#pt_ast{
         added_functions = AddedFunctions ++ [NewFun]
       };
-    _ -> throw(function_clause)
+    _ -> throw(function_clause_add_function)
   end.
 get_arity_(Clauses) ->
   lists:foldl(fun(Clause, {Status, Arity}) ->
@@ -694,10 +694,10 @@ build_get_record_field(RecordVar, RecordName, Field) when is_atom(RecordName), i
             RecordName, 
             build_atom(Field)};
         false ->
-          throw(function_clause)
+          throw(function_clause_build_get_record_field_0)
       end;
     true ->
-      throw(function_clause)
+      throw(function_clause_build_get_record_field_1)
   end.
 
 %% @doc
@@ -870,5 +870,5 @@ if_all_ast(List, Result) ->
   IS_AST = is_ast(List),
   if 
     IS_AST -> Result;
-    true -> throw(function_clause)
+    true -> throw(function_clause_if_all_ast)
   end.
