@@ -50,7 +50,8 @@
   is_ast/1,
   get_ast_type/1,
 
-  fields/1
+  fields/1,
+  directive/2
 ]).
 
 %% @doc
@@ -785,6 +786,17 @@ fields(#pt_ast{fields = Fields}) ->
         Data
     end, Fields).
 
+%% @doc
+%% Return the value for a directive Name
+%% @end
+-spec directive(ast(), atom()) -> list().
+directive(#pt_ast{directives = Directives}, Name) ->
+  lists:map(fun({_, Data}) ->
+        Data
+    end, lists:filter(fun({DirectiveName, _}) ->
+          DirectiveName =:= Name
+      end, Directives)).
+
 % Private parse
 
 parse_definition({attribute, _, module, ModuleName}, {Index, Files, PT_AST}) ->
@@ -822,6 +834,9 @@ parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, P
 parse_definition({attribute, _, field, Field}, {Index, Files, PT_AST = #pt_ast{fields = Fields}}) ->
   NewField = #pt_field{index = Index, data = Field},
   {Index + 1, Files, PT_AST#pt_ast{fields = Fields ++ [NewField]}};
+
+parse_definition({attribute, _, Directive, Data}, {Index, Files, PT_AST = #pt_ast{directives = Directives}}) ->
+  {Index + 1, Files, PT_AST#pt_ast{directives = Directives ++ [{Directive, Data}]}};
 
 parse_definition({eof, N}, {Index, Files, PT_AST}) ->
   {Index + 1, Files, PT_AST#pt_ast{last_line = N}};

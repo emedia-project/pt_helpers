@@ -8,6 +8,7 @@
   exports = [],
   exports_pos = -1,
   fields = [],
+  directives = [],
   functions = [],
   function_pos = -1,
 
