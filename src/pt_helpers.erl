@@ -37,6 +37,9 @@
   build_and_guard/2,
   build_or_guard/2,
 
+  build_case/2,
+  build_if/1,
+
   build_record/1,
   build_record/2,
   build_record/3,
@@ -60,6 +63,27 @@
 -spec module_name(pt_ast()) -> string().
 module_name(#pt_ast{module_name = ModuleName}) ->
   ModuleName.
+
+-spec build_case(ast(), ast()) -> ast().
+build_case(Exp, Clauses) ->
+  Clauses1 = if
+    is_list(Clauses) -> Clauses;
+    true -> [Clauses]
+  end,
+  _ = if_all_ast(Clauses1, ok),
+  case is_ast(Exp) of
+    true -> {'case', 1, Exp, Clauses1};
+    flase -> throw(function_clause_build_case)
+  end.
+
+-spec build_if(ast()) -> ast().
+build_if(Clauses) ->
+  Clauses1 = if
+    is_list(Clauses) -> Clauses;
+    true -> [Clauses]
+  end,
+  _ = if_all_ast(Clauses1, ok),
+  {'if', 1, Clauses1}.
 
 -spec build_clause(ast(), ast()) -> ast().
 build_clause(Vars, Body) -> build_clause(Vars, [], Body).
