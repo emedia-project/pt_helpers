@@ -73,7 +73,7 @@ build_case(Exp, Clauses) ->
   _ = if_all_ast(Clauses1, ok),
   case is_ast(Exp) of
     true -> {'case', 1, Exp, Clauses1};
-    flase -> throw(function_clause_build_case)
+    false -> throw(function_clause_build_case)
   end.
 
 -spec build_if(ast()) -> ast().
