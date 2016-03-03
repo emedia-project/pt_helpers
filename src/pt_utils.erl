@@ -1,11 +1,10 @@
+% @hidden
 -module(pt_utils).
 
 -export([renumber/1, revert/1]).
 
 -type form()    :: any().
 -type forms()   :: [form()].
-
-
 
 renumber(Result) ->
   Rev = revert(Result),

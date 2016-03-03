@@ -1,51 +1,15 @@
-ERL					?= erl
-ERLC				= erlc
-REL_DIR     = rel
-NODE				= {{name}}
-REL					= {{name}}
-APPS        = apps
-SCRIPT_PATH  := $(REL_DIR)/$(NODE)/bin/$(REL)
-REBAR       = ./rebar
+PROJECT = pt_helpers
 
-.PHONY: compile rel get-deps doc test
+DOC_DEPS = edown
+dep_edown = git https://github.com/uwiger/edown.git master
 
-all: compile
+include erlang.mk
 
-compile: get-deps
-	@$(REBAR) compile
+EDOC_OPTS = {doclet, edown_doclet} \
+						, {app_default, "http://www.erlang.org/doc/man"} \
+						, {source_path, ["src"]} \
+						, {overview, "overview.edoc"} \
+						, {stylesheet, ""} \
+						, {image, ""} \
+						, {top_level_readme, {"./README.md", "https://github.com/emedia-project/${PROJECT}"}}
 
-get-deps:
-	@$(REBAR) get-deps
-	@$(REBAR) check-deps
-
-clean:
-	@$(REBAR) clean
-	rm -f erl_crash.dump
-
-realclean: clean
-	@$(REBAR) delete-deps
-
-test:
-	@$(REBAR) skip_deps=true eunit
-
-rel: compile
-	@$(REBAR) generate
-
-doc:
-	@rm -rf doc
-	@mkdir doc
-	@cp _doc/* doc
-	$(REBAR) skip_deps=true doc
-	@cp _doc/stylesheet.css doc
-
-dev:
-	@erl -pa ebin 
-
-analyze: checkplt
-	@$(REBAR) skip_deps=true dialyze
-
-buildplt:
-	@$(REBAR) skip_deps=true build-plt
-
-checkplt: buildplt
-	@$(REBAR) skip_deps=true check-plt
