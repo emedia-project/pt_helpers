@@ -37,6 +37,9 @@
   build_and_guard/2,
   build_or_guard/2,
 
+  build_lc/2,
+  build_lc_generate/2,
+
   build_case/2,
   build_if/1,
 
@@ -56,6 +59,14 @@
   fields/1,
   directive/2
 ]).
+
+build_lc(Var, Generates) when is_list(Generates) ->
+  {lc, 1, Var, Generates};
+build_lc(Var, Generates) ->
+  build_lc(Var, [Generates]).
+
+build_lc_generate(Var, List) ->
+  {generate, 1, Var, List}.
 
 %% @doc
 %% Return the name of the module
