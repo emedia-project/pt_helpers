@@ -9,6 +9,7 @@
 
   module_name/1,
   find_function/3,
+  find_functions/2,
   add_function/4,
   add_export/3,
 
@@ -340,6 +341,16 @@ find_function_([Fun = #pt_fun{name = Name, arity = Arity}|_], Name, Arity) ->
   {ok, Fun};
 find_function_([_|Rest], Name, Arity) ->
   find_function_(Rest, Name, Arity).
+
+-spec find_functions(pt_ast(), atom()) -> {ok, pt_fun()} | {error, not_found}.
+find_functions(#pt_ast{functions = Functions}, Name) ->
+  find_functions_(Functions, Name, []).
+find_functions_([], _, Acc) ->
+  {ok, Acc};
+find_functions_([Fun = #pt_fun{name = Name}|Rest], Name, Acc) ->
+  find_functions_(Rest, Name, [Fun|Acc]);
+find_functions_([_|Rest], Name, Acc) ->
+  find_functions_(Rest, Name, Acc).
 
 %% @doc
 %% Add a function to the AST
@@ -846,7 +857,7 @@ parse_definition({attribute, _, export, Exports}, {Index, Files, PT_AST = #pt_as
 parse_definition({attribute, _, file, {FileName, _}}, {Index, Files, PT_AST}) ->
   {Index + 1, update_files(Files, FileName), PT_AST};
 
-parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, PT_AST = #pt_ast{functions = Functions, function_pos = FFP}}) ->
+parse_definition({function, _, FunctionName, FunctionArity, FunctionClauses} = FunAST, {Index, Files, PT_AST = #pt_ast{functions = Functions, function_pos = FFP}}) ->
   NewFFP = if 
     FFP =:= -1 -> Index;
     true -> FFP
@@ -859,7 +870,9 @@ parse_definition({function, _, FunctionName, FunctionArity, _}, {Index, Files, P
         #pt_fun{
           index = Index, 
           name = FunctionName, 
-          arity = FunctionArity
+          arity = FunctionArity,
+          clauses = FunctionClauses,
+          ast = FunAST
         }
       ], 
       function_pos = NewFFP
