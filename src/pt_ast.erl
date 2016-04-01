@@ -7,15 +7,33 @@
          , parse/2
          , generate/1
 
+         , parse_clause/1
+
          , add_function/4
          , add_export/3
 
          , remove_function/3
          , remove_export/3
 
+         , replace_function/4
+
          , find_function/3
+         , find_functions/2
         ]).
 
+% @doc
+% Parse a clause
+% @end
+-spec parse_clause(AST :: ast()) -> pt_clause().
+parse_clause({clause,1,Args,Guards,Body}) ->
+  #pt_clause{args = Args,
+             guards = Guards,
+             body = Body}.
+
+% @doc
+% Remove a function
+% @end
+-spec remove_function(PT_AST :: pt_ast(), Name :: atom(), Arity :: integer()) -> pt_ast().
 remove_function(#pt_ast{functions = Functions} = PT_AST, Name, Arity) when is_atom(Name),
                                                                            is_integer(Arity) ->
   PT_AST1 = PT_AST#pt_ast{functions = lists:foldl(
@@ -26,6 +44,10 @@ remove_function(#pt_ast{functions = Functions} = PT_AST, Name, Arity) when is_at
                                         end, [], Functions)},
   remove_export(PT_AST1, Name, Arity).
 
+% @doc
+% Remove a function export
+% @end
+-spec remove_export(PT_AST :: pt_ast(), Name :: atom(), Arity :: integer()) -> pt_ast().
 remove_export(#pt_ast{exports = Exports} = PT_AST, Name, Arity) when is_atom(Name),
                                                                      is_integer(Arity) ->
   PT_AST#pt_ast{exports = lists:delete({Name, Arity}, Exports)}.
@@ -43,6 +65,19 @@ find_function([#pt_fun{name = Name, arity = Arity} = PT_FUN|_], Name, Arity) ->
   {ok, PT_FUN};
 find_function([_|Rest], Name, Arity) ->
   find_function(Rest, Name, Arity).
+
+% @doc
+% Return all <tt>pt_fun()</tt> for the given <tt>Name</tt>
+% @end
+-spec find_functions(PT_AST :: pt_ast(), Name:: atom()) -> [pt_fun()].
+find_functions(#pt_ast{functions = Functions}, Name) when is_atom(Name) ->
+  find_functions(Functions, Name, []).
+find_functions([], _, Acc) ->
+  Acc;
+find_functions([#pt_fun{name = Name} = PT_FUN|Rest], Name, Acc) ->
+  find_functions(Rest, Name, [PT_FUN|Acc]);
+find_functions([_|Rest], Name, Acc) ->
+  find_functions(Rest, Name, Acc).
 
 %% @doc
 %% Add a function to the AST
@@ -84,23 +119,16 @@ add_function(
       end;
     _ -> throw(function_clause_add_function)
   end.
-get_arity_(Clauses) when is_list(Clauses) ->
-  lists:foldl(fun(Clause, {Status, Arity}) ->
-        if
-          Status =:= ok -> 
-            case Clause of
-              {clause, _, Parameters, _, _} -> 
-                if
-                  Arity =:= -1 orelse Arity =:= length(Parameters) -> {Status, length(Parameters)};
-                  true -> {error, Arity}
-                end;
-              _ -> {error, Arity}
-            end;
-          true -> {Status, Arity}
-        end
-    end, {ok, -1}, Clauses);
-get_arity_(Clauses) ->
-  get_arity_([Clauses]).
+
+-spec replace_function(pt_ast(), export | not_export, atom(), tuple() | list()) -> pt_ast().
+replace_function(PT_AST, Visibility, Name, Clauses) ->
+  case get_arity_(Clauses) of
+    {ok, Arity} ->
+      PT_AST1 = remove_function(PT_AST, Name, Arity),
+      add_function(PT_AST1, Visibility, Name, Clauses);
+    _ ->
+      throw(replace_function)
+  end.
 
 % @doc
 % @end
@@ -265,3 +293,20 @@ merge_attribute_lists(#pt_ast{attributes = Map} = PT_AST, Key, Values) ->
   Currents = maps:get(Key, Map, []),
   PT_AST#pt_ast{attributes = maps:put(Key, Map, Currents ++ Values)}.
 
+get_arity_(Clauses) when is_list(Clauses) ->
+  lists:foldl(fun(Clause, {Status, Arity}) ->
+        if
+          Status =:= ok -> 
+            case Clause of
+              {clause, _, Parameters, _, _} -> 
+                if
+                  Arity =:= -1 orelse Arity =:= length(Parameters) -> {Status, length(Parameters)};
+                  true -> {error, Arity}
+                end;
+              _ -> {error, Arity}
+            end;
+          true -> {Status, Arity}
+        end
+    end, {ok, -1}, Clauses);
+get_arity_(Clauses) ->
+  get_arity_([Clauses]).

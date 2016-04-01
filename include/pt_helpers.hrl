@@ -30,7 +30,14 @@
           data
          }).
 
+-record(pt_clause, {
+          args,
+          guards,
+          body
+         }).
+
 -type pt_ast() :: #pt_ast{}.
 -type pt_fun() :: #pt_fun{}.
+-type pt_clause() :: #pt_clause{}.
 -type ast() :: tuple() | [ast()].
 
