@@ -33,5 +33,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="pt_helpers.md" class="module">pt_helpers</a></td></tr></table>
+<tr><td><a href="pt_ast.md" class="module">pt_ast</a></td></tr>
+<tr><td><a href="pt_builder.md" class="module">pt_builder</a></td></tr></table>
 

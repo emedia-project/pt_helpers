@@ -1,6 +1,6 @@
 
 
-# Module pt_helpers #
+# Module pt_builder #
 * [Function Index](#index)
 * [Function Details](#functions)
 
@@ -9,10 +9,7 @@
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_export-3">add_export/3</a></td><td>
-Declare a new function to export in the AST.</td></tr><tr><td valign="top"><a href="#add_function-4">add_function/4</a></td><td>
-Add a function to the AST.</td></tr><tr><td valign="top"><a href="#add_record-3">add_record/3</a></td><td>
-Declare a new record to export in the AST.</td></tr><tr><td valign="top"><a href="#build_and_guard-2">build_and_guard/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_atom-1">build_atom/1</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#build_and_guard-2">build_and_guard/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_atom-1">build_atom/1</a></td><td>
 ASTify an atom.</td></tr><tr><td valign="top"><a href="#build_bin-1">build_bin/1</a></td><td>
 ASTify a bin.</td></tr><tr><td valign="top"><a href="#build_boolean-1">build_boolean/1</a></td><td>
 ASTify a boolean.</td></tr><tr><td valign="top"><a href="#build_call-2">build_call/2</a></td><td>
@@ -22,7 +19,7 @@ ASTify a float.</td></tr><tr><td valign="top"><a href="#build_fun-1">build_fun/1
 ASTify a fun.</td></tr><tr><td valign="top"><a href="#build_get_record_field-2">build_get_record_field/2</a></td><td>
 ASTify a record_field.</td></tr><tr><td valign="top"><a href="#build_get_record_field-3">build_get_record_field/3</a></td><td>
 ASTify a record_field.</td></tr><tr><td valign="top"><a href="#build_guard-1">build_guard/1</a></td><td></td></tr><tr><td valign="top"><a href="#build_if-1">build_if/1</a></td><td></td></tr><tr><td valign="top"><a href="#build_integer-1">build_integer/1</a></td><td>
-ASTify an integer.</td></tr><tr><td valign="top"><a href="#build_list-1">build_list/1</a></td><td>
+ASTify an integer.</td></tr><tr><td valign="top"><a href="#build_lc-2">build_lc/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_lc_generate-2">build_lc_generate/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_list-1">build_list/1</a></td><td>
 ASTify a list.</td></tr><tr><td valign="top"><a href="#build_match-2">build_match/2</a></td><td>
 ASTify a match (=).</td></tr><tr><td valign="top"><a href="#build_op-3">build_op/3</a></td><td>
 ASTify an operator.</td></tr><tr><td valign="top"><a href="#build_or_guard-2">build_or_guard/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_record-1">build_record/1</a></td><td>
@@ -33,84 +30,12 @@ ASTify a record_field.</td></tr><tr><td valign="top"><a href="#build_string-1">b
 ASTify a string.</td></tr><tr><td valign="top"><a href="#build_tuple-1">build_tuple/1</a></td><td>
 ASTify a tuple.</td></tr><tr><td valign="top"><a href="#build_value-1">build_value/1</a></td><td>
 ASTify the given value.</td></tr><tr><td valign="top"><a href="#build_var-1">build_var/1</a></td><td>
-ASTify a variable.</td></tr><tr><td valign="top"><a href="#directive-2">directive/2</a></td><td>
-Return the value for a directive Name.</td></tr><tr><td valign="top"><a href="#fields-1">fields/1</a></td><td>
-Return the list of all availables fields.</td></tr><tr><td valign="top"><a href="#find_function-3">find_function/3</a></td><td>
-Find the function with name <tt>Name</tt> and arity <tt>Arity</tt> in the parsed AST.</td></tr><tr><td valign="top"><a href="#generate-1">generate/1</a></td><td>
-Generate the AST.</td></tr><tr><td valign="top"><a href="#get_ast_type-1">get_ast_type/1</a></td><td>
-Return the type of the given AST.</td></tr><tr><td valign="top"><a href="#index-2">index/2</a></td><td>
-Return AST at index.</td></tr><tr><td valign="top"><a href="#is_ast-1">is_ast/1</a></td><td></td></tr><tr><td valign="top"><a href="#is_ast-2">is_ast/2</a></td><td></td></tr><tr><td valign="top"><a href="#module_name-1">module_name/1</a></td><td>
-Return the name of the module.</td></tr><tr><td valign="top"><a href="#parse-2">parse/2</a></td><td>
-Parse the given AST and return.</td></tr><tr><td valign="top"><a href="#transform-3">transform/3</a></td><td>
-Transform using the given fun.</td></tr></table>
+ASTify a variable.</td></tr></table>
 
 
 <a name="functions"></a>
 
 ## Function Details ##
-
-<a name="add_export-3"></a>
-
-### add_export/3 ###
-
-<pre><code>
-add_export(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Arity::integer()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
-</code></pre>
-<br />
-
-Declare a new function to export in the AST
-
-Example:
-
-```
-
-  % export function/2
-  pt_helpers:add_export(function, 2).
-```
-
-<a name="add_function-4"></a>
-
-### add_function/4 ###
-
-<pre><code>
-add_function(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Visibility::export | not_export, Name::atom(), Clauses::tuple() | list()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
-</code></pre>
-<br />
-
-Add a function to the AST
-
-Example:
-
-```
-
-  A = pt_helpers:build_var('A'),
-  B = pt_helpers:build_var('B'),
-  AIsNumber = pt_helpers:build_call(is_number, A),
-  BIsNumber = pt_helpers:build_call(is_number, B),
-  Guards = pt_helpers:build_and_guard(AIsNumber, BIsNumber),
-  Body = pt_helpers:build_op('*', A, B),
-  Clauses = pt_helpers:build_clause([A, B], Guards, Body),
-  PT_AST1 = pt_helpers:add_function(PT_AST, export, my_function, Clauses)
-  % => my_function(A, B) when is_number(A), is_number(B) -> A * B
-```
-
-<a name="add_record-3"></a>
-
-### add_record/3 ###
-
-<pre><code>
-add_record(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Attributes::list()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
-</code></pre>
-<br />
-
-Declare a new record to export in the AST
-
-Example:
-
-```
-
-  pt_helpers:add_record(record_name, [{field1, integer}, {field2, []}, field3]).
-```
 
 <a name="build_and_guard-2"></a>
 
@@ -299,6 +224,21 @@ build_integer(I::integer()) -&gt; <a href="#type-ast">ast()</a>
 
 ASTify an integer
 
+<a name="build_lc-2"></a>
+
+### build_lc/2 ###
+
+<pre><code>
+build_lc(Var::<a href="#type-ast">ast()</a>, Generates::<a href="#type-ast">ast()</a> | [<a href="#type-ast">ast()</a>]) -&gt; <a href="#type-ast">ast()</a>
+</code></pre>
+<br />
+
+<a name="build_lc_generate-2"></a>
+
+### build_lc_generate/2 ###
+
+`build_lc_generate(Var, List) -> any()`
+
 <a name="build_list-1"></a>
 
 ### build_list/1 ###
@@ -353,7 +293,7 @@ Example:
 
 ```
 
-  pt_helpers:build_record(rec) % => #rec{}
+  pt_builder:build_record(rec) % => #rec{}
 ```
 
 <a name="build_record-2"></a>
@@ -368,9 +308,9 @@ Example:
 
 ```
 
-  F1 = pt_helpers:build_record_field(field1, pt_helpers:build_value(12)),
-  F2 = pt_helpers:build_record_field(field2, pt_helpers:build_var('X'),
-  pt_helpers:build_record(rec, [F1, F2]) % => #rec{field1 = 12, field2 = X}
+  F1 = pt_builder:build_record_field(field1, pt_builder:build_value(12)),
+  F2 = pt_builder:build_record_field(field2, pt_builder:build_var('X'),
+  pt_builder:build_record(rec, [F1, F2]) % => #rec{field1 = 12, field2 = X}
 ```
 
 <a name="build_record-3"></a>
@@ -385,9 +325,9 @@ Example:
 
 ```
 
-  F1 = pt_helpers:build_record_field(field1, pt_helpers:build_value(12)),
-  F2 = pt_helpers:build_record_field(field2, pt_helpers:build_var('X'),
-  pt_helpers:build_record('R', rec, [F1, F2]) % => R#rec{field1 = 12, field2 = X}
+  F1 = pt_builder:build_record_field(field1, pt_builder:build_value(12)),
+  F2 = pt_builder:build_record_field(field2, pt_builder:build_var('X'),
+  pt_builder:build_record('R', rec, [F1, F2]) % => R#rec{field1 = 12, field2 = X}
 ```
 
 <a name="build_record_field-2"></a>
@@ -448,163 +388,4 @@ build_var(A::atom()) -&gt; <a href="#type-ast">ast()</a>
 <br />
 
 ASTify a variable
-
-<a name="directive-2"></a>
-
-### directive/2 ###
-
-<pre><code>
-directive(Pt_ast::<a href="#type-ast">ast()</a>, Name::atom()) -&gt; list()
-</code></pre>
-<br />
-
-Return the value for a directive Name
-
-<a name="fields-1"></a>
-
-### fields/1 ###
-
-<pre><code>
-fields(Pt_ast::<a href="#type-ast">ast()</a>) -&gt; list()
-</code></pre>
-<br />
-
-Return the list of all availables fields
-
-<a name="find_function-3"></a>
-
-### find_function/3 ###
-
-<pre><code>
-find_function(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Arity::integer()) -&gt; {ok, <a href="#type-pt_fun">pt_fun()</a>} | {error, not_found}
-</code></pre>
-<br />
-
-Find the function with name `Name` and arity `Arity` in the parsed AST
-
-Example:
-
-```
-
-  parse_transform(AST, _Option) ->
-    PT_AST = pt_helpers:parse(AST),
-    PT_FUN = pt_helpers:find_function(PT_AST, my_function, 2).
-    % Do something with PT_FUN
-    pt_helpers(PT_AST).
-```
-
-<a name="generate-1"></a>
-
-### generate/1 ###
-
-<pre><code>
-generate(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>) -&gt; <a href="#type-ast">ast()</a>
-</code></pre>
-<br />
-
-Generate the AST
-
-Example:
-
-```
-
-  parse_transform(AST, Option) ->
-    PT_AST = pt_helpers:parse(AST, Option),
-    % Do something with PT_AST
-    pt_helpers:generate(PT_AST).
-```
-
-<a name="get_ast_type-1"></a>
-
-### get_ast_type/1 ###
-
-<pre><code>
-get_ast_type(E::<a href="#type-ast">ast()</a>) -&gt; {ok, atom()} | {error, wrong_ast}
-</code></pre>
-<br />
-
-Return the type of the given AST
-
-<a name="index-2"></a>
-
-### index/2 ###
-
-<pre><code>
-index(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>, I::integer()) -&gt; <a href="#type-ast">ast()</a>
-</code></pre>
-<br />
-
-Return AST at index
-
-<a name="is_ast-1"></a>
-
-### is_ast/1 ###
-
-<pre><code>
-is_ast(AST::<a href="#type-ast">ast()</a> | [<a href="#type-ast">ast()</a>]) -&gt; true | false
-</code></pre>
-<br />
-
-<a name="is_ast-2"></a>
-
-### is_ast/2 ###
-
-<pre><code>
-is_ast(Type::atom(), AST::<a href="#type-ast">ast()</a> | [<a href="#type-ast">ast()</a>]) -&gt; true | false
-</code></pre>
-<br />
-
-<a name="module_name-1"></a>
-
-### module_name/1 ###
-
-<pre><code>
-module_name(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>) -&gt; string()
-</code></pre>
-<br />
-
-Return the name of the module
-
-<a name="parse-2"></a>
-
-### parse/2 ###
-
-<pre><code>
-parse(AST::string(), Options::list()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
-</code></pre>
-<br />
-
-Parse the given AST and return
-
-Example:
-
-```
-
-  parse_transform(AST, Option) ->
-    PT_AST = pt_helpers:parse(AST, Options),
-    % Do something with PT_AST
-    pt_helpers:generate(PT_AST).
-```
-
-<a name="transform-3"></a>
-
-### transform/3 ###
-
-<pre><code>
-transform(Fun::function(), AST::string(), Options::list()) -&gt; <a href="#type-ast">ast()</a>
-</code></pre>
-<br />
-
-Transform using the given fun
-
-Example:
-
-```
-
-  parse_transform(AST, Option) ->
-    pt_helpers:transform(fun do_the_job/1, AST, Option).
-  do_the_job(PT_AST) ->
-    % Do something with PT_AST
-    PT_ASTn.
-```
 

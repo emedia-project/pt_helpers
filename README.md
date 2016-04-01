@@ -33,5 +33,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/emedia-project/pt_helpers/blob/master/doc/pt_helpers.md" class="module">pt_helpers</a></td></tr></table>
+<tr><td><a href="https://github.com/emedia-project/pt_helpers/blob/refactor/doc/pt_ast.md" class="module">pt_ast</a></td></tr>
+<tr><td><a href="https://github.com/emedia-project/pt_helpers/blob/refactor/doc/pt_builder.md" class="module">pt_builder</a></td></tr></table>
 

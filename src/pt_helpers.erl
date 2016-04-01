@@ -1,3 +1,4 @@
+% @hidden
 -module(pt_helpers).
 
 -include("../include/pt_helpers_defs.hrl").
