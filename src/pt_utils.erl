@@ -1,7 +1,17 @@
 % @hidden
 -module(pt_utils).
+-include("../include/pt_helpers.hrl").
 
--export([renumber/1, revert/1]).
+-export([
+         renumber/1, 
+         revert/1,
+         is_in/2,
+         is_ast/2,
+         is_ast/1,
+         get_ast_type/1,
+         is_string/1,
+         if_all_ast/2
+        ]).
 
 -type form()    :: any().
 -type forms()   :: [form()].
@@ -94,4 +104,60 @@ is_form(T) ->
   catch
     error:_ ->
       false
+  end.
+
+is_in(Element, List) ->
+  lists:any(fun(E) -> E =:= Element end, List).
+
+%% @doc
+%% @end
+-spec is_ast(atom(), ast() | [ast()]) -> true | false.
+is_ast(Type, AST) when is_tuple(AST) ->
+  case Type of
+    boolean -> element(1, AST) =:= atom andalso (element(3, AST) =:= true orelse element(3, AST) =:= false);
+    any -> is_atom(element(1, AST)) and is_integer(element(2, AST));
+    T -> 
+      First = element(1, AST),
+      if
+        First =:= T -> true;
+        First =:= attribute -> element(3, AST) =:= Type;
+        true -> false
+      end
+  end;
+is_ast(Type, AST) when is_list(AST) ->
+  lists:all(fun(E) ->
+        is_ast(Type, E)
+    end, AST);
+is_ast(_, _) -> false.
+
+%% @doc
+%% @end
+-spec is_ast(ast() | [ast()]) -> true | false.
+is_ast(AST) -> is_ast(any, AST).
+
+%% @doc
+%% Return the type of the given AST
+%% @end
+-spec get_ast_type(ast()) -> {ok, atom()} | {error, wrong_ast}.
+get_ast_type(E) when is_tuple(E) ->
+  IsAst = is_ast(E),
+  if
+    IsAst =:= true -> 
+      First = element(1, E),
+      if
+        First =:= attribute -> {ok, element(3, E)};
+        true -> First
+      end;
+    true -> {error, wrong_ast}
+  end.
+
+is_string(S) ->
+  io_lib:printable_list(S) orelse io_lib:printable_unicode_list(S).
+
+if_all_ast([], Result) -> Result;
+if_all_ast(List, Result) ->
+  IS_AST = is_ast(List),
+  if 
+    IS_AST -> Result;
+    true -> throw(function_clause_if_all_ast)
   end.

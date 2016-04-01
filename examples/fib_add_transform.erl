@@ -3,6 +3,7 @@
 -export([parse_transform/2]).
 
 parse_transform(AST, Options) ->
+  io:format("AST = ~p~n", [AST]),
   % Parse the incomming AST
   PT_AST = pt_helpers:parse(AST, Options),
   
