@@ -10,10 +10,14 @@
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_export-3">add_export/3</a></td><td></td></tr><tr><td valign="top"><a href="#add_function-4">add_function/4</a></td><td>
-Add a function to the AST.</td></tr><tr><td valign="top"><a href="#find_function-3">find_function/3</a></td><td>
-Seeach for the function <tt>Name</tt> with <tt>Arity</tt> and return the correspondive <tt>#pt_fun{}</tt></td></tr><tr><td valign="top"><a href="#generate-1">generate/1</a></td><td>
-Generate the AST.</td></tr><tr><td valign="top"><a href="#parse-2">parse/2</a></td><td>
-Parse the given AST and return.</td></tr><tr><td valign="top"><a href="#remove_export-3">remove_export/3</a></td><td></td></tr><tr><td valign="top"><a href="#remove_function-3">remove_function/3</a></td><td></td></tr><tr><td valign="top"><a href="#transform-3">transform/3</a></td><td>
+Add a function to the AST.</td></tr><tr><td valign="top"><a href="#directive-2">directive/2</a></td><td></td></tr><tr><td valign="top"><a href="#find_function-3">find_function/3</a></td><td>
+Seeach for the function <tt>Name</tt> with <tt>Arity</tt> and return the correspondive <tt>#pt_fun{}</tt></td></tr><tr><td valign="top"><a href="#find_functions-2">find_functions/2</a></td><td>
+Return all <tt>pt_fun()</tt> for the given <tt>Name</tt></td></tr><tr><td valign="top"><a href="#generate-1">generate/1</a></td><td>
+Generate the AST.</td></tr><tr><td valign="top"><a href="#module_name-1">module_name/1</a></td><td></td></tr><tr><td valign="top"><a href="#parse-2">parse/2</a></td><td>
+Parse the given AST and return.</td></tr><tr><td valign="top"><a href="#parse_clause-1">parse_clause/1</a></td><td>
+Parse a clause.</td></tr><tr><td valign="top"><a href="#remove_export-3">remove_export/3</a></td><td>
+Remove a function export.</td></tr><tr><td valign="top"><a href="#remove_function-3">remove_function/3</a></td><td>
+Remove a function.</td></tr><tr><td valign="top"><a href="#replace_function-4">replace_function/4</a></td><td></td></tr><tr><td valign="top"><a href="#transform-3">transform/3</a></td><td>
 Transform using the given fun.</td></tr></table>
 
 
@@ -56,6 +60,15 @@ Example:
   % => my_function(A, B) when is_number(A), is_number(B) -> A * B
 ```
 
+<a name="directive-2"></a>
+
+### directive/2 ###
+
+<pre><code>
+directive(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>, Directive::atom()) -&gt; [<a href="#type-ast">ast()</a>]
+</code></pre>
+<br />
+
 <a name="find_function-3"></a>
 
 ### find_function/3 ###
@@ -66,6 +79,17 @@ find_function(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Arity::
 <br />
 
 Seeach for the function `Name` with `Arity` and return the correspondive `#pt_fun{}`
+
+<a name="find_functions-2"></a>
+
+### find_functions/2 ###
+
+<pre><code>
+find_functions(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom()) -&gt; [<a href="#type-pt_fun">pt_fun()</a>]
+</code></pre>
+<br />
+
+Return all `pt_fun()` for the given `Name`
 
 <a name="generate-1"></a>
 
@@ -88,6 +112,15 @@ Example:
     pt_ast:generate(PT_AST).
 ```
 
+<a name="module_name-1"></a>
+
+### module_name/1 ###
+
+<pre><code>
+module_name(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>) -&gt; atom()
+</code></pre>
+<br />
+
 <a name="parse-2"></a>
 
 ### parse/2 ###
@@ -109,17 +142,47 @@ Example:
     pt_ast:generate(PT_AST).
 ```
 
+<a name="parse_clause-1"></a>
+
+### parse_clause/1 ###
+
+<pre><code>
+parse_clause(AST::<a href="#type-ast">ast()</a>) -&gt; <a href="#type-pt_clause">pt_clause()</a>
+</code></pre>
+<br />
+
+Parse a clause
+
 <a name="remove_export-3"></a>
 
 ### remove_export/3 ###
 
-`remove_export(Pt_ast, Name, Arity) -> any()`
+<pre><code>
+remove_export(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Arity::integer()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
+</code></pre>
+<br />
+
+Remove a function export
 
 <a name="remove_function-3"></a>
 
 ### remove_function/3 ###
 
-`remove_function(Pt_ast, Name, Arity) -> any()`
+<pre><code>
+remove_function(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Name::atom(), Arity::integer()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
+</code></pre>
+<br />
+
+Remove a function
+
+<a name="replace_function-4"></a>
+
+### replace_function/4 ###
+
+<pre><code>
+replace_function(PT_AST::<a href="#type-pt_ast">pt_ast()</a>, Visibility::export | not_export, Name::atom(), Clauses::tuple() | list()) -&gt; <a href="#type-pt_ast">pt_ast()</a>
+</code></pre>
+<br />
 
 <a name="transform-3"></a>
 
