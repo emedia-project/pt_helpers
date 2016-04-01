@@ -9,7 +9,40 @@
 
          , add_function/4
          , add_export/3
+
+         , remove_function/3
+         , remove_export/3
+
+         , find_function/3
         ]).
+
+remove_function(#pt_ast{functions = Functions} = PT_AST, Name, Arity) when is_atom(Name),
+                                                                           is_integer(Arity) ->
+  PT_AST1 = PT_AST#pt_ast{functions = lists:foldl(
+                                        fun
+                                          (#pt_fun{name = N, arity = A}, Acc) when N == Name,
+                                                                                   A == Arity -> Acc;
+                                          (Fun, Acc) -> [Fun|Acc]
+                                        end, [], Functions)},
+  remove_export(PT_AST1, Name, Arity).
+
+remove_export(#pt_ast{exports = Exports} = PT_AST, Name, Arity) when is_atom(Name),
+                                                                     is_integer(Arity) ->
+  PT_AST#pt_ast{exports = lists:delete({Name, Arity}, Exports)}.
+
+% @doc
+% Seeach for the function <tt>Name</tt> with <tt>Arity</tt> and return the correspondive <tt>#pt_fun{}</tt>
+% @end
+-spec find_function(PT_AST :: pt_ast(), Name :: atom(), Arity :: integer()) -> {ok, pt_fun()} | not_found.
+find_function(#pt_ast{functions = Functions}, Name, Arity) when is_atom(Name),
+                                                                is_integer(Arity) ->
+  find_function(Functions, Name, Arity);
+find_function([], _, _) ->
+  not_found;
+find_function([#pt_fun{name = Name, arity = Arity} = PT_FUN|_], Name, Arity) ->
+  {ok, PT_FUN};
+find_function([_|Rest], Name, Arity) ->
+  find_function(Rest, Name, Arity).
 
 %% @doc
 %% Add a function to the AST

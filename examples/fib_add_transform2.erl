@@ -40,8 +40,9 @@ parse_transform(AST, Options) ->
   % fibonacci(1) -> 1;
   % fibonacci(N) when is_integer(N), N >= 0 -> fibonacci(N - 1) + fibonacci(N - 1).
   PT_AST1 = pt_ast:add_function(PT_AST, export, fibonacci, [FibClause0, FibClause1, FibClauseN]),
+  PT_AST2 = pt_ast:remove_function(PT_AST1, fib, 1),
 
   % Generate the output AST
-  AST1 = pt_ast:generate(PT_AST1),
-  io:format("AST1 = ~p~n", [AST1]),
-  AST1.
+  AST2 = pt_ast:generate(PT_AST2),
+  io:format("AST1 = ~p~n", [AST2]),
+  AST2.
