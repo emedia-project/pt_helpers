@@ -19,7 +19,22 @@
 
          , find_function/3
          , find_functions/2
+
+         , directive/2
+
+         , module_name/1
         ]).
+
+% @doc
+% @end
+-spec directive(pt_ast(), atom()) -> [ast()].
+directive(#pt_ast{attributes = Map}, Directive) when is_atom(Directive) ->
+  maps:get(Directive, Map, []).
+
+% @doc
+% @end
+-spec module_name(pt_ast()) -> atom().
+module_name(#pt_ast{module = Module}) -> Module.
 
 % @doc
 % Parse a clause
