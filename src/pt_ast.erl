@@ -113,10 +113,10 @@ find_functions([_|Rest], Name, Acc) ->
 -spec add_function(pt_ast(), export | not_export, atom(), tuple() | list()) -> pt_ast().
 add_function(
   PT_AST = #pt_ast{functions = AddedFunctions}, 
-  Visibility, 
-  Name, 
-  Clauses
-) ->
+  Visibility, Name, Clauses) 
+  when (Visibility == export orelse Visibility == not_export),
+       is_atom(Name),
+       is_list(Clauses) ->
   case get_arity_(Clauses) of
     {ok, Arity} ->
       NewFun = #pt_fun{
@@ -133,17 +133,30 @@ add_function(
         true -> PT_AST1
       end;
     _ -> throw(function_clause_add_function)
-  end.
+  end;
+add_function(PT_AST, Visibility, Name, Clauses) 
+  when (Visibility == export orelse Visibility == not_export),
+       is_atom(Name),
+       is_tuple(Clauses) ->
+  add_function(PT_AST, Visibility, Name, [Clauses]).
 
 -spec replace_function(pt_ast(), export | not_export, atom(), tuple() | list()) -> pt_ast().
-replace_function(PT_AST, Visibility, Name, Clauses) ->
+replace_function(PT_AST, Visibility, Name, Clauses) 
+  when (Visibility == export orelse Visibility == not_export),
+       is_atom(Name),
+       is_list(Clauses) ->
   case get_arity_(Clauses) of
     {ok, Arity} ->
       PT_AST1 = remove_function(PT_AST, Name, Arity),
       add_function(PT_AST1, Visibility, Name, Clauses);
     _ ->
       throw(replace_function)
-  end.
+  end;
+replace_function(PT_AST, Visibility, Name, Clauses) 
+  when (Visibility == export orelse Visibility == not_export),
+       is_atom(Name),
+       is_tuple(Clauses) ->
+  replace_function(PT_AST, Visibility, Name, [Clauses]).
 
 % @doc
 % @end
@@ -306,7 +319,7 @@ parse([Def|Rest], #pt_ast{unparsed = CurrentUnparsed} = PT_AST, Index) ->
 
 merge_attribute_lists(#pt_ast{attributes = Map} = PT_AST, Key, Values) ->
   Currents = maps:get(Key, Map, []),
-  PT_AST#pt_ast{attributes = maps:put(Key, Map, Currents ++ Values)}.
+  PT_AST#pt_ast{attributes = maps:put(Key, Currents ++ [Values], Map)}.
 
 get_arity_(Clauses) when is_list(Clauses) ->
   lists:foldl(fun(Clause, {Status, Arity}) ->

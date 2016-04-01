@@ -4,6 +4,7 @@
 -export([fib/1]).
 -include("../include/pt_helpers.hrl").
 -define(TOTO, 1).
+-facts([{a, b}]).
 
 % @doc
 % fibo

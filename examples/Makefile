@@ -10,4 +10,5 @@ fib_sample:
 	@erlc -pa ../ebin -pa . fib_add_transform_sample2.erl
 
 clean:
+	@make -C .. distclean
 	@rm -rf *.beam
