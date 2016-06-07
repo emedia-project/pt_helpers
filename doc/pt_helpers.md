@@ -22,7 +22,7 @@ ASTify a float.</td></tr><tr><td valign="top"><a href="#build_fun-1">build_fun/1
 ASTify a fun.</td></tr><tr><td valign="top"><a href="#build_get_record_field-2">build_get_record_field/2</a></td><td>
 ASTify a record_field.</td></tr><tr><td valign="top"><a href="#build_get_record_field-3">build_get_record_field/3</a></td><td>
 ASTify a record_field.</td></tr><tr><td valign="top"><a href="#build_guard-1">build_guard/1</a></td><td></td></tr><tr><td valign="top"><a href="#build_if-1">build_if/1</a></td><td></td></tr><tr><td valign="top"><a href="#build_integer-1">build_integer/1</a></td><td>
-ASTify an integer.</td></tr><tr><td valign="top"><a href="#build_list-1">build_list/1</a></td><td>
+ASTify an integer.</td></tr><tr><td valign="top"><a href="#build_lc-2">build_lc/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_lc_generate-2">build_lc_generate/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_list-1">build_list/1</a></td><td>
 ASTify a list.</td></tr><tr><td valign="top"><a href="#build_match-2">build_match/2</a></td><td>
 ASTify a match (=).</td></tr><tr><td valign="top"><a href="#build_op-3">build_op/3</a></td><td>
 ASTify an operator.</td></tr><tr><td valign="top"><a href="#build_or_guard-2">build_or_guard/2</a></td><td></td></tr><tr><td valign="top"><a href="#build_record-1">build_record/1</a></td><td>
@@ -36,7 +36,7 @@ ASTify the given value.</td></tr><tr><td valign="top"><a href="#build_var-1">bui
 ASTify a variable.</td></tr><tr><td valign="top"><a href="#directive-2">directive/2</a></td><td>
 Return the value for a directive Name.</td></tr><tr><td valign="top"><a href="#fields-1">fields/1</a></td><td>
 Return the list of all availables fields.</td></tr><tr><td valign="top"><a href="#find_function-3">find_function/3</a></td><td>
-Find the function with name <tt>Name</tt> and arity <tt>Arity</tt> in the parsed AST.</td></tr><tr><td valign="top"><a href="#generate-1">generate/1</a></td><td>
+Find the function with name <tt>Name</tt> and arity <tt>Arity</tt> in the parsed AST.</td></tr><tr><td valign="top"><a href="#find_functions-2">find_functions/2</a></td><td></td></tr><tr><td valign="top"><a href="#generate-1">generate/1</a></td><td>
 Generate the AST.</td></tr><tr><td valign="top"><a href="#get_ast_type-1">get_ast_type/1</a></td><td>
 Return the type of the given AST.</td></tr><tr><td valign="top"><a href="#index-2">index/2</a></td><td>
 Return AST at index.</td></tr><tr><td valign="top"><a href="#is_ast-1">is_ast/1</a></td><td></td></tr><tr><td valign="top"><a href="#is_ast-2">is_ast/2</a></td><td></td></tr><tr><td valign="top"><a href="#module_name-1">module_name/1</a></td><td>
@@ -299,6 +299,18 @@ build_integer(I::integer()) -&gt; <a href="#type-ast">ast()</a>
 
 ASTify an integer
 
+<a name="build_lc-2"></a>
+
+### build_lc/2 ###
+
+`build_lc(Var, Generates) -> any()`
+
+<a name="build_lc_generate-2"></a>
+
+### build_lc_generate/2 ###
+
+`build_lc_generate(Var, List) -> any()`
+
 <a name="build_list-1"></a>
 
 ### build_list/1 ###
@@ -492,6 +504,15 @@ Example:
     % Do something with PT_FUN
     pt_helpers(PT_AST).
 ```
+
+<a name="find_functions-2"></a>
+
+### find_functions/2 ###
+
+<pre><code>
+find_functions(Pt_ast::<a href="#type-pt_ast">pt_ast()</a>, Name::atom()) -&gt; {ok, <a href="#type-pt_fun">pt_fun()</a>} | {error, not_found}
+</code></pre>
+<br />
 
 <a name="generate-1"></a>
 

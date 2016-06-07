@@ -10,3 +10,5 @@ erl_crash.dump
 .erlang.mk
 *.swp
 *.d
+_build/
+test/eunit/
